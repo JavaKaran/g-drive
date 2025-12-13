@@ -9,12 +9,14 @@ import os
 from models.file import File, FileStatus
 from core.config import settings
 from exceptions.exceptions import FileUploadException
+from services.folder_service import FolderService
 
 
 class FileService:
     def __init__(self, db: Session):
         self.db = db
         self.s3_client = self._create_r2_client()
+        self.folder_service = FolderService(db)
 
     def _create_r2_client(self):
         """Create and return a boto3 S3 client configured for Cloudflare R2"""
@@ -35,8 +37,7 @@ class FileService:
         
         # Get folder path if folder_id is provided
         if folder_id:
-            from models.folder import Folder
-            folder = self.db.query(Folder).filter(Folder.id == folder_id).first()
+            folder = self.folder_service.get_folder_by_id(folder_id, user_id)
             if folder:
                 # Use folder path, sanitize it
                 folder_path = folder.path.strip('/').replace(' ', '_').replace('/', '_')
@@ -72,11 +73,7 @@ class FileService:
         try:
             # Validate folder belongs to user if provided
             if folder_id:
-                from models.folder import Folder
-                folder = self.db.query(Folder).filter(
-                    Folder.id == folder_id,
-                    Folder.user_id == user_id
-                ).first()
+                folder = self.folder_service.get_folder_by_id(folder_id, user_id)
                 if not folder:
                     raise FileUploadException("Folder not found or access denied")
             
@@ -149,11 +146,7 @@ class FileService:
         if folder_id is not None:
             # Validate folder belongs to user
             if folder_id:
-                from models.folder import Folder
-                folder = self.db.query(Folder).filter(
-                    Folder.id == folder_id,
-                    Folder.user_id == user_id
-                ).first()
+                folder = self.folder_service.get_folder_by_id(folder_id, user_id)
                 if not folder:
                     raise FileUploadException("Folder not found or access denied")
             query = query.filter(File.folder_id == folder_id)
