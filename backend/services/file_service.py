@@ -151,6 +151,8 @@ class FileService:
                 if not folder:
                     raise FileUploadException("Folder not found or access denied")
             query = query.filter(File.folder_id == folder_id)
+        else:
+            query = query.filter(File.folder_id == None)
         
         return query.order_by(File.created_at.desc()).offset(skip).limit(limit).all()
 
