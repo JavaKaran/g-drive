@@ -2,17 +2,24 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { authService } from '@/services/auth'
-import type { User } from '@/lib/types'
+import { folderService } from '@/services/folder'
+import { fileService } from '@/services/file'
+import type { User, Folder, File } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogOut, User as UserIcon } from 'lucide-react'
+import { LogOut, User as UserIcon, Folder as FolderIcon, File as FileIcon } from 'lucide-react'
 import Cookies from 'js-cookie'
+import { AxiosError } from 'axios'
 
 export default function DashboardPage() {
     const router = useRouter()
     const [user, setUser] = useState<User | null>(null)
+    const [folders, setFolders] = useState<Folder[]>([])
+    const [files, setFiles] = useState<File[]>([])
     const [loading, setLoading] = useState(true)
+    const [itemsLoading, setItemsLoading] = useState(true)
 
     useEffect(() => {
         const token = Cookies.get('access_token')
@@ -21,18 +28,31 @@ export default function DashboardPage() {
             return
         }
 
-        const fetchUser = async () => {
+        const fetchData = async () => {
             try {
                 const userData = await authService.getCurrentUser()
                 setUser(userData)
+
+                // Fetch root folders and files
+                const [rootFolders, rootFiles] = await Promise.all([
+                    folderService.getRootFolders(),
+                    fileService.getRootFiles(),
+                ])
+                setFolders(rootFolders)
+                setFiles(rootFiles)
             } catch (error) {
-                router.push('/login')
+                const axiosError = error as AxiosError<{ detail?: string }>
+                const errorMessage = axiosError.response?.data?.detail || axiosError.message || 'Failed to load dashboard data'
+                toast.error('Error', {
+                    description: errorMessage,
+                })
             } finally {
                 setLoading(false)
+                setItemsLoading(false)
             }
         }
 
-        fetchUser()
+        fetchData()
     }, [router])
 
     const handleLogout = async () => {
@@ -75,25 +95,71 @@ export default function DashboardPage() {
             </div>
 
             <div className="container mx-auto px-4 py-12">
-                <Card className="max-w-2xl mx-auto">
+                <div className="mb-8">
+                    <h2 className="text-2xl font-semibold mb-2">Welcome back, {user?.username}!</h2>
+                    <p className="text-muted-foreground">
+                        Manage your files and folders from here
+                    </p>
+                </div>
+
+                <Card>
                     <CardHeader>
-                        <CardTitle className="text-3xl">Welcome to G-Drive</CardTitle>
-                        <CardDescription>
-                            Your personal file storage and management system
-                        </CardDescription>
+                        <CardTitle>All Files and Folders</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            <p className="text-muted-foreground">
-                                Hello, <span className="font-semibold text-foreground">{user?.username}</span>!
-                                You've successfully logged in to your dashboard.
-                            </p>
-                            <div className="pt-4 border-t border-border">
-                                <p className="text-sm text-muted-foreground">
-                                    This is your dashboard. You can start managing your files and folders from here.
-                                </p>
+                        {itemsLoading ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                Loading items...
                             </div>
-                        </div>
+                        ) : folders.length === 0 && files.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No folders or files yet. Start by creating a folder or uploading a file.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {/* Folders */}
+                                {folders.map((folder) => (
+                                    <Card
+                                        key={folder.id}
+                                        className="cursor-pointer hover:bg-accent transition-colors"
+                                    >
+                                        <CardContent className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="rounded-lg bg-primary/10 p-2">
+                                                    <FolderIcon className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium truncate">{folder.name}</p>
+                                                    <p className="text-xs text-muted-foreground">Folder</p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+
+                                {/* Files */}
+                                {files.map((file) => (
+                                    <Card
+                                        key={file.id}
+                                        className="cursor-pointer hover:bg-accent transition-colors"
+                                    >
+                                        <CardContent className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="rounded-lg bg-secondary/10 p-2">
+                                                    <FileIcon className="h-5 w-5 text-secondary-foreground" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium truncate">{file.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {(file.size / 1024).toFixed(2)} KB
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
