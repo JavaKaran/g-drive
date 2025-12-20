@@ -42,7 +42,7 @@ export default function RegisterPage() {
                 username: formData.username,
                 password: formData.password,
             })
-            router.push('/login')
+            router.push('/dashboard')
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Registration failed. Please try again.')
         } finally {

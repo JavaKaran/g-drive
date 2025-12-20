@@ -8,10 +8,16 @@ import type { RegisterData, LoginData, User, TokenResponse } from '@/lib/types';
  */
 export const authService = {
     /**
-     * Register a new user
+     * Register a new user and automatically log them in
      */
-    register: async (data: RegisterData): Promise<User> => {
-        const response = await api.post<User>('/auth/register', data);
+    register: async (data: RegisterData): Promise<TokenResponse> => {
+        const response = await api.post<TokenResponse>('/auth/register', data);
+
+        // Store token in cookie
+        if (response.data.access_token) {
+            Cookies.set('access_token', response.data.access_token, { expires: 7 });
+        }
+
         return response.data;
     },
 

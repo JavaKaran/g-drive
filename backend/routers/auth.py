@@ -12,20 +12,23 @@ from dependencies.auth import get_current_active_user
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
     """
-    Register a new user.
+    Register a new user and automatically log them in.
     
     - **email**: User's email address (must be unique)
     - **username**: User's username (must be unique)
     - **password**: User's password (will be hashed)
+    
+    Returns a JWT access token for immediate use.
     """
     auth_service = AuthService(db)
-    return auth_service.register_user(user_data)
+    user = auth_service.register_user(user_data)
+    return auth_service.create_access_token_for_user(user)
 
 
 @router.post("/login", response_model=Token)
