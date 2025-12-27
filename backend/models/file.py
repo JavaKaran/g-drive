@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, BigInteger, DateTime, ForeignKey, Enum, Integer, Text
+from sqlalchemy import Column, String, BigInteger, DateTime, ForeignKey, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -8,9 +8,8 @@ import json
 from database import Base
 
 class FileStatus(str, enum.Enum):
-    UPLOADING = "uploading"
+    INITIATED = "initiated"
     COMPLETED = "completed"
-    FAILED = "failed"
     DELETED = "deleted"
 
 class File(Base):
@@ -21,16 +20,14 @@ class File(Base):
     name = Column(String, nullable=False)
     size = Column(BigInteger, nullable=False)
     mime = Column(String, nullable=True)
-    storage_key = Column(String, nullable=False, unique=True, index=True)
-    status = Column(Enum(FileStatus), default=FileStatus.UPLOADING, nullable=False)
     folder_id = Column(UUID(as_uuid=True), ForeignKey("folders.id"), nullable=True, index=True)
-    upload_id = Column(String, nullable=True)
-    total_parts = Column(Integer, nullable=True)
-    uploaded_parts_json = Column(Text, nullable=True)
+    storage_key = Column(String, nullable=False, unique=True, index=True)
+    status = Column(Enum(FileStatus), default=FileStatus.INITIATED, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    user = relationship("User", backref="files")
+    user = relationship("User", backref="file")
+    uploads = relationship("Upload", backref="file")
 
     @property
     def uploaded_parts(self) -> list[dict]:

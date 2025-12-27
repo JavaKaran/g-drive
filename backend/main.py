@@ -6,7 +6,7 @@ from database import engine, get_db, Base
 from routers.auth import router as auth_router
 from routers.file import router as file_router
 from routers.folder import router as folder_router
-from models import User, File, Folder  # Import models to ensure they're registered
+from models import User, File, Folder, Upload, UploadPart
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -20,7 +20,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
